@@ -46,15 +46,17 @@ public class CodeMap1 {
       
 	//Add to titandb
 	//tinkerTest tc = new tinkerTest();
-	hgClass hg = new hgClass("/mike/HyperGraphDB/XIF");
+	//hgClass hg = new hgClass("/mike/HyperGraphDB/XIF");
+	neo4jClass n4j = new neo4jClass();
+	
 
 	// Add files
-        for(String projectPath : fu.getFileList()){
-		projectPath  = projectPath.replace(basePath + "\\", "");
-		String[] parts = projectPath.split(Pattern.quote("\\"));
-		String fname = parts[parts.length - 1];
-		//tc.addVertex("file", fname);
-        }
+//        for(String projectPath : fu.getFileList()){
+//		projectPath  = projectPath.replace(basePath + "\\", "");
+//		String[] parts = projectPath.split(Pattern.quote("\\"));
+//		String fname = parts[parts.length - 1];
+//		//tc.addVertex("file", fname);
+//        }
 	
 	// Add methods
 	Pattern methodUsePattern = Pattern.compile(".*[ .]([A-Za-z0-9_]*)\\(.*");
@@ -65,10 +67,10 @@ public class CodeMap1 {
 		String filePath  = fullPath.replace("\\" + fname, "");
 		// find vertex for parent file	
 	//	Vertex parentVertex = tc.getVertex(fname);
-		
+		org.neo4j.graphdb.Node parentNode	= n4j.addVertex("file", fname);
 		vbFileClass vb = new vbFileClass();
 		vb.setVertexLabel(fname);
-		HGHandle fileVertex = hg.addVertex(vb);
+//		HGHandle fileVertex = hg.addVertex(vb);
 		// Open file
 		    File file = new File(fullPath);
 		    FileReader fr;
@@ -89,13 +91,18 @@ public class CodeMap1 {
 					// Add the method object
 					methodClass mc = new methodClass();
 					mc.setVertexLabel(methodName);
-					HGHandle methVertex = hg.addVertex(mc);
+					//HGHandle methVertex = hg.addVertex(mc);
 					// Link method to the file it's in
-					HGValueLink link = new HGValueLink("contains", fileVertex, methVertex);
+//					HGValueLink link = new HGValueLink("contains", fileVertex, methVertex);
+
+					//Add method node
+					org.neo4j.graphdb.Node methodNode	= n4j.addVertex("method", methodName);
+					// Link it to the file
+					n4j.addEdge(parentNode, methodNode, neo4jClass.RelTypes.CONTAINS, null, null);
 				}
-			    }
-			    br.close();
-			    fr.close();
+				}
+				br.close();
+				fr.close();
 			} catch (FileNotFoundException ex) {
 				Logger.getLogger(CodeMap1.class.getName()).log(Level.SEVERE, null, ex);
 			} catch (IOException ex) {
@@ -111,7 +118,7 @@ public class CodeMap1 {
 		String filePath  = fullPath.replace("\\" + fname, "");
 		// find vertex for parent file	
 		//Vertex parentVertex = tc.getVertex(fname);
-		HGHandle parentVertex = hg.findVertex(fname,vbFileClass.class);
+//		HGHandle parentVertex = hg.findVertex(fname,vbFileClass.class);
 		// Open file
 		    File file = new File(fullPath);
 		    FileReader fr;
@@ -136,10 +143,18 @@ public class CodeMap1 {
 		//				GremlinPipeline pipe = new GremlinPipeline(parentVertex).out("contains").property("name").filter((String argument) -> argument.equals(thisMethod));						
 						//find called method vertex
 		//				Vertex calledMethodVertex = tc.getVertex(matchUse.group(1));
-						HGHandle callingVertex = hg.findVertex(thisMethod,methodClass.class);
-						HGHandle calledVertex = hg.findVertex(matchUse.group(1),methodClass.class);
+//						HGHandle callingVertex = hg.findVertex(thisMethod,methodClass.class);
+//						HGHandle calledVertex = hg.findVertex(matchUse.group(1),methodClass.class);
 						//Add edge linking this method to the file it's in
-						HGValueLink link = new HGValueLink("calls", callingVertex, calledVertex);
+//						HGValueLink link = new HGValueLink("calls", callingVertex, calledVertex);
+						
+						org.neo4j.graphdb.Node callingVertex = n4j.findVertex("method", thisMethod);
+						org.neo4j.graphdb.Node calledVertex = n4j.findVertex("method", matchUse.group(1));
+						
+						// Link it to the file
+						n4j.addEdge(callingVertex, calledVertex, neo4jClass.RelTypes.CALLS, null, null);
+
+							
 					}
 				}
 			    }
@@ -154,8 +169,9 @@ public class CodeMap1 {
 
 	
 //tc.dumpGraph();
-	hg.dump();
-	hg.closeGraph();
+//	hg.dump();
+//	hg.closeGraph();
+		n4j.
     }
    
 }

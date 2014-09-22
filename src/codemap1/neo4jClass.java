@@ -1,6 +1,9 @@
 package codemap1;
 
 import java.io.File;
+import java.util.Iterator;
+import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -12,6 +15,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
+import org.neo4j.helpers.collection.IteratorUtil;
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -26,7 +30,8 @@ GraphDatabaseService graphDb;
 Node firstNode;
 Node secondNode;
 Relationship relationship;	
-private static final String DB_PATH = "target/neo4j-hello-db";
+ExecutionEngine engine;
+private static final String DB_PATH = "target/XIF";
  public static enum RelTypes implements RelationshipType
     {
         CONTAINS,
@@ -38,10 +43,12 @@ private static final String DB_PATH = "target/neo4j-hello-db";
 		 Method
  }
 
-  public static void main( final String[] args )
+  neo4jClass()
     {
         neo4jClass n4j = new neo4jClass();
         n4j.createDb();
+		// create an exectution engine in case we want to do any queries (which we undoubtably do)	
+		engine = new ExecutionEngine( graphDb );
         //hello.removeData();
        // n4j.shutDown();
     }
@@ -62,6 +69,7 @@ private static final String DB_PATH = "target/neo4j-hello-db";
 					tx.success();
 				}
 		}
+		
 		
         registerShutdownHook( graphDb );
         // END SNIPPET: startDb
@@ -116,6 +124,7 @@ private static final String DB_PATH = "target/neo4j-hello-db";
     {
         System.out.println();
         System.out.println( "Shutting down database ..." );
+		
         // START SNIPPET: shutdownServer
         graphDb.shutdown();
         // END SNIPPET: shutdownServer
@@ -161,17 +170,48 @@ private static final String DB_PATH = "target/neo4j-hello-db";
 			return node;
 		}
 	}
+	
    	public void addEdge(Node nodeFrom, Node nodeTo, RelationshipType linkType, String linkProperty, String linkValue) {
-
 		try (Transaction tx = graphDb.beginTx()) {
-			Relationship relationship = nodeFrom.createRelationshipTo(nodeTo, linkType);
-			relationship.setProperty(linkProperty, linkValue);
+			Relationship rel = nodeFrom.createRelationshipTo(nodeTo, linkType);
+			if(linkProperty != null){
+				rel.setProperty(linkProperty, linkValue);
+			}
 			tx.success();
 		}
 	}
 
 	public Node findVertex(String vertexType, String nodeLabel){
 		Label nodeTypeLabel = DynamicLabel.label( vertexType );
-		graphDb.findNodesByLabelAndProperty( nodeTypeLabel, nodeLabel, this)
+		Node result=null;
+//		graphDb.findNodesByLabelAndProperty( nodeTypeLabel, nodeLabel, this)
+
+		ExecutionResult queryResult;
+		try ( Transaction ignored = graphDb.beginTx() )
+		{
+			queryResult = engine.execute( "match (n) WHERE n.vertexType=" + nodeLabel + " return n" );
+			Iterator<Node> n_column = queryResult.columnAs( "n" );
+			for ( Node node : IteratorUtil.asIterable( n_column ) )
+			{
+				result = node;
+			}
+		}
+		return result;
+		
 	}
+
+	public void dump(){
+			
+		ExecutionResult queryResult;
+		try ( Transaction ignored = graphDb.beginTx() )
+		{
+			queryResult = engine.execute( "match (f)-[CONTAINS]->(m) return n" );
+			Iterator<Node> n_column = queryResult.columnAs( "n" );
+			for ( Node node : IteratorUtil.asIterable( n_column ) )
+			{
+				
+			}
+		}
+	}
+	
 }
